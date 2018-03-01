@@ -5,11 +5,10 @@
 #include <unistd.h>
 #include <math.h>
 
-/*create dynamic arrays for philosophers and chopsticks*/
+/*create dynamic arrays for philosophers*/
 pthread_t* threads;
 
-
-/**/
+/*create dynamic array of mutex*/
 pthread_mutex_t* mutex;
 
 int num_philosophers;
@@ -23,17 +22,18 @@ int main(int argc, char *argv[]) {
         exit(1);
     }  
     num_philosophers = atoi(argv[1]);  
-
     mutex = (pthread_mutex_t *) malloc(num_philosophers * sizeof(pthread_mutex_t));
 
     /*create n number of threads for n number of philosophers*/
     threads = (pthread_t *) malloc(num_philosophers * sizeof(pthread_t));
 
+    /*All the mutex are set to NULL*/
     int i;
     for (i=0;i<num_philosophers;i++) {
     	pthread_mutex_init(&mutex[i], NULL);
 	}
 
+	/*create thread for each philosopher*/
 	i = 0;
 	for (i;i<num_philosophers;i++) {
 		int *copy = (int *) malloc(sizeof(*copy));
@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
 	 	pthread_create(&threads[i], NULL, runner, (void*) copy);
 	}
 
+	/*join all the threads*/
 	i = 0;
 	for (i;i<num_philosophers;i++) {
      	pthread_join(threads[i], NULL);
@@ -49,7 +50,9 @@ int main(int argc, char *argv[]) {
  }
 
 
-void* runner(void* arg) {
+void* runner(void* arg) 
+/*runner function which checks the mutex lock for the mutual exclusion*/
+	{
 	int param = *((int *) arg);
 	srand(time(NULL)); 
 
@@ -58,13 +61,18 @@ void* runner(void* arg) {
 		int t = (int) pow(10,6) + rand() % ((3 *(int) pow(10,6)) -  (int) pow(10,6));
 		usleep(t);
 		
-		/*while both the left and right chopsticks are used for the philosopher, it waits*/
-		if ((param + 1) % 2 == 0) {
+		/*left & right chopsticks in use for the "param" philosopher*/
+
+		if ((param + 1) % 2 == 0) 
+		/*if the philosopher is even numbered, s/he picks right chopstick first and then left chopstick*/
+		{
 			printf("%d is waiting...\n", param);
 			pthread_mutex_lock(&mutex[param]);
 			pthread_mutex_lock(&mutex[(param + 1) % num_philosophers]);
 		}
-		else {
+		else 
+		/*if the philosopher is odd numbered, s/he picks left chopstick first and then right chopstick*/
+		{
 			printf("%d is waiting...\n", param);
 			pthread_mutex_lock(&mutex[(param + 1) % num_philosophers]);
 			pthread_mutex_lock(&mutex[param]);
@@ -75,12 +83,16 @@ void* runner(void* arg) {
 		usleep(e);
 
 		
-		if ((param + 1) % 2 == 0) {
+		if ((param + 1) % 2 == 0)
+		/*release locks for even numbered philosopher*/
+		{
 			pthread_mutex_unlock(&mutex[(param + 1) % num_philosophers]);
 			pthread_mutex_unlock(&mutex[param]);
-			printf("%d Releasing\n", param);
+			printf("%d releasing\n", param);
 		}
-		else {
+		else 
+		/*release locks for odd numbered philosophers*/
+		{
 			pthread_mutex_unlock(&mutex[param]);
 			pthread_mutex_unlock(&mutex[(param + 1) % num_philosophers]);
 			printf("%d is releasing\n", param);
