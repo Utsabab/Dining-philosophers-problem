@@ -3,14 +3,14 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <math.h>
 
 /*create dynamic arrays for philosophers and chopsticks*/
 pthread_t* threads;
-int* chopsticks;
+
 
 /**/
 pthread_mutex_t* mutex;
-pthread_cond_t cond_var;
 
 int num_philosophers;
 
@@ -26,22 +26,13 @@ int main(int argc, char *argv[]) {
 
     mutex = (pthread_mutex_t *) malloc(num_philosophers * sizeof(pthread_mutex_t));
 
-    chopsticks = (int *) malloc(num_philosophers * sizeof(int));
-
-    /*initialize all the chopsticks to 1 as available initially*/
-    int i = 0;
-    for (i;i<num_philosophers;i++) {
-    	chopsticks[i] = 1;
-    }
-
     /*create n number of threads for n number of philosophers*/
     threads = (pthread_t *) malloc(num_philosophers * sizeof(pthread_t));
 
+    int i;
     for (i=0;i<num_philosophers;i++) {
     	pthread_mutex_init(&mutex[i], NULL);
 	}
-
-	pthread_cond_init(&cond_var, NULL);
 
 	i = 0;
 	for (i;i<num_philosophers;i++) {
@@ -66,28 +57,35 @@ void* runner(void* arg) {
 		printf("%d is thinking!!!\n", param);
 		int t = (int) pow(10,6) + rand() % ((3 *(int) pow(10,6)) -  (int) pow(10,6));
 		usleep(t);
-		pthread_mutex_lock(&mutex);
-
+		
 		/*while both the left and right chopsticks are used for the philosopher, it waits*/
-		while (chopsticks[param] == 0 || chopsticks[(param + 1) % num_philosophers] == 0) {
-			printf("chola chola\n");
+		if ((param + 1) % 2 == 0) {
 			printf("%d is waiting...\n", param);
-			pthread_cond_wait(&mutex, &cond_var);
-			
+			pthread_mutex_lock(&mutex[param]);
+			pthread_mutex_lock(&mutex[(param + 1) % num_philosophers]);
 		}
-		/*chopsticks used are set to 0 as they are being used in a criticial section*/
-		chopsticks[param] = 0;
-		chopsticks[(param + 1) % num_philosophers] = 0;
-
+		else {
+			printf("%d is waiting...\n", param);
+			pthread_mutex_lock(&mutex[(param + 1) % num_philosophers]);
+			pthread_mutex_lock(&mutex[param]);
+		}
+						
 		printf("%d is eating$$$\n", param);
 		int e = (int) pow(10,6) + rand() % ((3 *(int) pow(10,6)) -  (int) pow(10,6));
 		usleep(e);
 
-		/*chopsticks are set to 1 as they are out of critical section and available*/
-		chopsticks[param] = 1;
-		chopsticks[(param + 1) % num_philosophers] = 1;
-		pthread_cond_signal(&cond_var);
-		pthread_mutex_unlock(&mutex);
+		
+		if ((param + 1) % 2 == 0) {
+			pthread_mutex_unlock(&mutex[(param + 1) % num_philosophers]);
+			pthread_mutex_unlock(&mutex[param]);
+			printf("%d Releasing\n", param);
+		}
+		else {
+			pthread_mutex_unlock(&mutex[param]);
+			pthread_mutex_unlock(&mutex[(param + 1) % num_philosophers]);
+			printf("%d is releasing\n", param);
+		}	
+		printf("%d Done eating\n", param);		
 	}
-	
+	return NULL;
 }
