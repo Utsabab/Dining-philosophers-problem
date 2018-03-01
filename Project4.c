@@ -15,8 +15,8 @@ int num_philosophers;
 
 /*header for runner function*/
 void* runner(void* param);
-void acquire(int x);
-void release(int y);
+void acquire(int arg);
+void release(int arg);
 
 int main(int argc, char *argv[]) {
     if(argc<=1) {
